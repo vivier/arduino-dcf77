@@ -1,3 +1,6 @@
+//#define MODE 0 // HUMAN
+#define MODE 1 // MEINBERG
+
 static const int blink_pin = 13;
 
 static const int dcf77_pin = 2;
@@ -46,6 +49,8 @@ static inline void clear_samples(void) {
 
 static void build_date(void)
 {
+  /* see http://en.wikipedia.org/wiki/DCF77 for decoding */
+  
   date.summer_time = get_bit(bits,17);
   
   date.minute = get_bit(bits, 21)      +
@@ -111,6 +116,15 @@ static int checksum(int start, int nb)
   return sum & 1;
 }
 
+static void printxx(int value)
+{
+  if (value < 10) {
+    Serial.print("0");
+  }
+  Serial.print(value);
+}
+
+#if MODE == 0
 static void dump_date(void)
 {
   if (date.day == 0) {
@@ -129,23 +143,57 @@ static void dump_date(void)
   
   Serial.print(" ");      
   
-  Serial.print(date.day);
+  printxx(date.day);
   Serial.print("/");
-  Serial.print(date.month);
+  printxx(date.month);
   Serial.print("/");
   Serial.print(2000 + date.year);
   
   Serial.print(" ");
   
-  Serial.print(date.hour);
+  printxx(date.hour);
   Serial.print(":");
-  Serial.print(date.minute);
+  printxx(date.minute);
   if (date.summer_time) {
     Serial.println(" CEST");
   } else {
     Serial.println(" CET");
   }
 }
+#else
+static void dump_date(void)
+{
+  if (date.day == 0) {
+    return;
+  }
+  /* MEINBERG format for use with ntp server
+   * http://www.meinberg.de/english/specs/timestr.htm
+   */
+  Serial.write(2); /* STX = Start of TeXt */
+  Serial.print("D:");
+  printxx(date.day);
+  Serial.print(".");
+  printxx(date.month);
+  Serial.print(".");
+  printxx(date.year);
+  Serial.print(";T:");
+  Serial.print(date.day_of_week);
+  Serial.print(";U:");
+  printxx(date.hour);
+  Serial.print(".");
+  printxx(date.minute);
+  Serial.print(".");
+  printxx(0);
+  Serial.print(";  ");
+  if (date.summer_time) {
+    Serial.print("S");
+  } else {
+    Serial.print(" ");
+  }
+  Serial.print(" ");
+  Serial.write(3); /* ETX = End of TeXt */
+}
+#endif
 
 /* rising marks begin of a new bit */
 
@@ -161,8 +209,8 @@ static void dcf77_rising(void) {
     }
     /* the 59th second is not sent to mark the new minute */
     if (duration > 1990) {
-      clear_bits();
       dump_date();
+      clear_bits();
     }
   }
   /* new second */
