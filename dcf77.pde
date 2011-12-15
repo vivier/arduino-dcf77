@@ -154,6 +154,8 @@ static void dump_date(void)
   printxx(date.hour);
   Serial.print(":");
   printxx(date.minute);
+  Serial.print(":");
+  printxx(current_bit);
   if (date.summer_time) {
     Serial.println(" CEST");
   } else {
@@ -183,7 +185,7 @@ static void dump_date(void)
   Serial.print(".");
   printxx(date.minute);
   Serial.print(".");
-  printxx(0);
+  printxx(current_bit);
   Serial.print(";  ");
   if (date.summer_time) {
     Serial.print("S");
@@ -209,7 +211,6 @@ static void dcf77_rising(void) {
     }
     /* the 59th second is not sent to mark the new minute */
     if (duration > 1990) {
-      dump_date();
       clear_bits();
     }
   }
@@ -233,6 +234,9 @@ void loop(void) {
   delay(10); 
   
   level = digitalRead(dcf77_pin);
+  if (current_sample == 0) { 
+    dump_date();
+  }
   if (current_sample < 10) {
     /* first 100 ms */
     if (level == HIGH) {
