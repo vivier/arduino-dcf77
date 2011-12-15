@@ -3,7 +3,6 @@ static const int blink_pin = 13;
 static const int dcf77_pin = 2;
 static const int dcf77_int = 0; /* interrupt 0 is driven by pin 2 */
 
-
 static unsigned long bit_start = 0;
 static int current_bit = 0;
 static int current_sample = 0;
@@ -14,6 +13,7 @@ struct {
   int hour;
   int minute;
   int second;
+  int summer_time;
   int day;
   int month;
   int year;
@@ -46,6 +46,8 @@ static inline void clear_samples(void) {
 
 static void build_date(void)
 {
+  date.summer_time = get_bit(bits,17);
+  
   date.minute = get_bit(bits, 21)      +
                 get_bit(bits, 22) * 2  +
                 get_bit(bits, 23) * 4  +
@@ -137,7 +139,12 @@ static void dump_date(void)
   
   Serial.print(date.hour);
   Serial.print(":");
-  Serial.println(date.minute);
+  Serial.print(date.minute);
+  if (date.summer_time) {
+    Serial.println(" CEST");
+  } else {
+    Serial.println(" CET");
+  }
 }
 
 /* rising marks begin of a new bit */
