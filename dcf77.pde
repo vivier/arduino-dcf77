@@ -1,3 +1,8 @@
+/* http://www.arduino.cc/playground/uploads/Main/MsTimer2.zip
+ * Install it on {arduino-path}/hardware/libraries/
+ */
+#include  <MsTimer2.h>
+
 //#define MODE 0 // HUMAN
 #define MODE 1 // MEINBERG
 
@@ -197,6 +202,63 @@ static void dump_date(void)
 }
 #endif
 
+static void dcf77_sampler(void) {
+  int level;
+  
+  level = digitalRead(dcf77_pin);
+  if (level) {
+    samples_high++;
+  }
+  current_sample++;
+  
+  if (current_sample < 10) {
+    return;
+  }
+  
+  /* check first 100 ms are really up */
+  if (current_sample == 10) {
+    if (samples_high < 6) {
+      /* we miss the second */
+      noInterrupts();
+      MsTimer2::stop();
+      if (level) {
+        bit_start = millis();
+      } else {
+        bit_start = 0;
+      }
+      interrupts();
+      return;
+    }
+    samples_high = 0;
+    return;
+  }
+
+  if (current_sample < 20) {
+    return;
+  }
+  
+  /* check first if 200 ms are up */
+  
+  if (samples_high < 6) {
+      digitalWrite(blink_pin, LOW);
+      add_bit(0);
+  } else {
+      digitalWrite(blink_pin, HIGH);
+      add_bit(1);
+  }
+
+  MsTimer2::stop();
+}
+
+static void start_sampling(void) {
+  clear_samples();
+  MsTimer2::start();
+}
+
+static void stop_sampling(void) {
+  MsTimer2::stop();
+}
+
 /* rising marks begin of a new bit */
 
 static void dcf77_rising(void) {
@@ -215,7 +277,7 @@ static void dcf77_rising(void) {
     }
   }
   /* new second */
-  clear_samples();
+  start_sampling();
   bit_start = time;
 }
 
@@ -225,52 +287,14 @@ void setup(void) {
   pinMode(dcf77_pin, INPUT);
   digitalWrite(dcf77_pin, HIGH); /* enable pull-up resistor */
   attachInterrupt(dcf77_int, dcf77_rising, RISING);
+  MsTimer2::set(10, dcf77_sampler); /* sample every 10 ms */
 }
 
 void loop(void) {
   int level;
-  
-  /* collect every 10 ms */
-  delay(10); 
-  
-  level = digitalRead(dcf77_pin);
-  if (current_sample == 0) { 
+
+  delay(10);
+  if (current_sample == 0) {
     dump_date();
   }
-  if (current_sample < 10) {
-    /* first 100 ms */
-    if (level == HIGH) {
-      samples_high++;
-    }
-  } else if (current_sample < 20) {
-    /* check first 100 ms are really up */
-    if (current_sample == 10) {
-      if (samples_high < 6) {
-        /* we miss the second */
-        noInterrupts();
-        if (level) {
-          bit_start = millis();
-        } else {
-          bit_start = 0;
-        }
-        interrupts();
-        return;
-      }
-      samples_high = 0;
-    }
-    /* second 100 ms */
-    if (level == HIGH) {
-      samples_high++;
-    }
-  } else if (current_sample == 20) {
-     /* check first if 200 ms are up */
-    if (samples_high < 6) {
-        digitalWrite(blink_pin, LOW);
-        add_bit(0);
-    } else {
-        digitalWrite(blink_pin, HIGH);
-        add_bit(1);
-    }
-  }
-  current_sample++;
 }
