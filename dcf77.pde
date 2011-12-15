@@ -3,11 +3,12 @@ static const int blink_pin = 13;
 static const int dcf77_pin = 2;
 static const int dcf77_int = 0; /* interrupt 0 is driven by pin 2 */
 
-static int current_bit = -1;
+
+static unsigned long bit_start = 0;
+static int current_bit = 0;
 static int current_sample = 0;
 static unsigned char bits[8];
 static unsigned int samples_high;
-static int date_ok = 0;
 
 struct {
   int hour;
@@ -85,7 +86,6 @@ static void build_date(void)
               get_bit(bits, 55) * 20 +
               get_bit(bits, 56) * 40 +
               get_bit(bits, 57) * 80;
-  date_ok = 1;
 }
 
 static inline void add_bit(int level) {
@@ -111,7 +111,7 @@ static int checksum(int start, int nb)
 
 static void dump_date(void)
 {
-  if (date_ok == 0) {
+  if (date.day == 0) {
     return;
   }
    
@@ -137,16 +137,11 @@ static void dump_date(void)
   
   Serial.print(date.hour);
   Serial.print(":");
-  Serial.print(date.minute);
-  Serial.print(":");
-  Serial.print(current_bit);
-  
-  Serial.println("         ");
+  Serial.println(date.minute);
 }
 
 /* rising marks begin of a new bit */
 
-static unsigned long bit_start = 0;
 static void dcf77_rising(void) {
   unsigned long time = millis();
 
@@ -181,9 +176,6 @@ void loop(void) {
   
   /* collect every 10 ms */
   delay(10); 
-  if (current_bit == -1) {
-    return;
-  }
   
   level = digitalRead(dcf77_pin);
   if (current_sample < 10) {
