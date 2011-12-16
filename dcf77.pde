@@ -16,6 +16,7 @@ static int current_bit = 0;
 static int current_sample = 0;
 static unsigned char bits[8];
 static unsigned int samples_high;
+static int new_second = 0;
 
 struct {
   int hour;
@@ -141,9 +142,6 @@ static inline void add_bit(int level) {
     clear_bit(bits, current_bit);
   }
   current_bit = (current_bit + 1) % 60;
-  if (current_bit == 58) {
-    build_date();
-  }
 }
 
 static int checksum(int start, int nb)
@@ -317,10 +315,12 @@ static void dcf77_rising(void) {
     }
     /* the 59th second is not sent to mark the new minute */
     if (duration > 1990) {
+      build_date();
       clear_bits();
     }
   }
   /* new second */
+  new_second = 1;
   start_sampling();
   bit_start = time;
 }
@@ -339,10 +339,9 @@ void setup(void) {
 }
 
 void loop(void) {
-  int level;
-
   delay(10);
-  if (current_sample == 0) {
+  if (new_second) {
+    new_second = 0;
     dump_date();
   }
 }
