@@ -241,6 +241,7 @@ static void dump_date(void)
     Serial.print(" ");
   }
   Serial.write(3); /* ETX = End of TeXt */
+  Serial.println("");
 }
 #endif
 
@@ -326,11 +327,10 @@ static void dcf77_rising(void) {
 }
 
 void setup(void) {
-#if MODE == 0
   Serial.begin(9600);
-#else
-  Serial.begin(19200);
-#endif  
+#if MODE == 1
+  UCSR0C = (1<<7)| (1<<3) | (2<<1) |(1<<5);   /* 7 bits, 2 bit stop, Even */ 
+#endif
   pinMode(blink_pin, OUTPUT);
   pinMode(dcf77_pin, INPUT);
   digitalWrite(dcf77_pin, HIGH); /* enable pull-up resistor */
