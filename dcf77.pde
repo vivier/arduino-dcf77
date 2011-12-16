@@ -65,31 +65,45 @@ static void build_date(void)
                 get_bit(bits, 25) * 10 +
                 get_bit(bits, 26) * 20 +
                 get_bit(bits, 27) * 40;
-           
+  if (date.minute > 59) {
+    goto bad_date;
+  }
   date.hour = get_bit(bits, 29)      +
               get_bit(bits, 30) * 2  +
               get_bit(bits, 31) * 4  +
               get_bit(bits, 32) * 8  +
               get_bit(bits, 33) * 10 +
               get_bit(bits, 34) * 20;
+  if (date.hour > 23) {
+    goto bad_date;
+  }
             
   date.day = get_bit(bits, 36)      +
              get_bit(bits, 37) * 2  +
              get_bit(bits, 38) * 4  +
              get_bit(bits, 39) * 8  +
              get_bit(bits, 40) * 10 +
-             get_bit(bits, 41) * 20;
-            
+             get_bit(bits, 41) * 20;  
+  if (date.day < 1 || date.day > 31) {
+    goto bad_date;
+  }
+  
   date.day_of_week = get_bit(bits, 42)      +
                      get_bit(bits, 43) * 2  +
                      get_bit(bits, 44) * 4;
-           
+  if (date.day_of_week < 0 || date.day_of_week > 7) {
+   goto bad_date;
+  }
+  
   date.month = get_bit(bits, 45)      +
                get_bit(bits, 46) * 2  +
                get_bit(bits, 47) * 4  +
                get_bit(bits, 48) * 8  +
                get_bit(bits, 49) * 10;
-            
+  if (date.month < 1 || date.month > 12) {
+    goto bad_date;
+  }
+  
   date.year = get_bit(bits, 50)      +
               get_bit(bits, 51) * 2  +
               get_bit(bits, 52) * 4  +
@@ -98,6 +112,12 @@ static void build_date(void)
               get_bit(bits, 55) * 20 +
               get_bit(bits, 56) * 40 +
               get_bit(bits, 57) * 80;
+  if (date.year < 11) {
+    goto bad_date;
+  }
+  return;
+bad_date:
+    date.day = 0;
 }
 
 static inline void add_bit(int level) {
