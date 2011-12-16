@@ -21,11 +21,15 @@ struct {
   int hour;
   int minute;
   int second;
-  int summer_time;
   int day;
   int month;
   int year;
   int day_of_week;
+
+  boolean CEST;
+  boolean CET;  
+  boolean CEST_announce;
+  boolean second_leap_announce;
 } date;
 
 static inline void clear_bit(unsigned char *buf, int bit) {
@@ -56,7 +60,16 @@ static void build_date(void)
 {
   /* see http://en.wikipedia.org/wiki/DCF77 for decoding */
   
-  date.summer_time = get_bit(bits,17);
+  date.CEST_announce = get_bit(bits, 16) != 0;
+  date.CEST = get_bit(bits,17) != 0;
+  date.CET = get_bit(bits,18) != 0;
+  date.second_leap_announce = get_bit(bits, 19) != 0;
+  
+  /* start encoded time */
+  
+  if (get_bit(bits, 20) != 1) {
+    goto bad_date;
+  }
   
   date.minute = get_bit(bits, 21)      +
                 get_bit(bits, 22) * 2  +
@@ -68,6 +81,7 @@ static void build_date(void)
   if (date.minute > 59) {
     goto bad_date;
   }
+  
   date.hour = get_bit(bits, 29)      +
               get_bit(bits, 30) * 2  +
               get_bit(bits, 31) * 4  +
@@ -181,10 +195,12 @@ static void dump_date(void)
   printxx(date.minute);
   Serial.print(":");
   printxx(current_bit);
-  if (date.summer_time) {
+  if (date.CEST) {
     Serial.println(" CEST");
-  } else {
+  } else if (date.CET) {
     Serial.println(" CET");
+  } else {
+    Serial.println(" UTC");
   }
 }
 #else
@@ -212,12 +228,20 @@ static void dump_date(void)
   Serial.print(".");
   printxx(current_bit);
   Serial.print(";  ");
-  if (date.summer_time) {
+  if (date.CEST) {
     Serial.print("S");
+  } else if (date.CET) {
+    Serial.print(" ");
   } else {
+    Serial.print("U");
+  }
+  if (date.CEST_announce) {
+    Serial.print("!");
+  } else if (date.second_leap_announce) {
+    Serial.print("A");
+  } else { 
     Serial.print(" ");
   }
-  Serial.print(" ");
   Serial.write(3); /* ETX = End of TeXt */
 }
 #endif
