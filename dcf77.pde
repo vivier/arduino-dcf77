@@ -282,7 +282,11 @@ static void dcf77_rising(void) {
 }
 
 void setup(void) {
+#if MODE == 0
   Serial.begin(9600);
+#else
+  Serial.begin(19200);
+#endif  
   pinMode(blink_pin, OUTPUT);
   pinMode(dcf77_pin, INPUT);
   digitalWrite(dcf77_pin, HIGH); /* enable pull-up resistor */
