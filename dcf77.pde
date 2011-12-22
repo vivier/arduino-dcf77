@@ -31,6 +31,8 @@ struct {
   boolean CET;  
   boolean CEST_announce;
   boolean second_leap_announce;
+  
+  int signal_quality;
 } date;
 
 static inline void clear_bit(unsigned char *buf, int bit) {
@@ -164,6 +166,10 @@ static void printxx(int value)
 #if MODE == 0
 static void dump_date(void)
 {
+  Serial.print("Quality ");
+  Serial.print(date.signal_quality);
+  Serial.println("%");
+  
   if (date.day == 0) {
     return;
   }
@@ -260,6 +266,7 @@ static void dcf77_sampler(void) {
   
   /* check first 100 ms are really up */
   if (current_sample == 10) {
+    date.signal_quality = (date.signal_quality + samples_high * 10 + 1) / 2;
     if (samples_high < 6) {
       /* we miss the second */
       noInterrupts();
@@ -327,6 +334,7 @@ static void dcf77_rising(void) {
 }
 
 void setup(void) {
+  date.signal_quality = 0;
   Serial.begin(9600);
 #if MODE == 1
   UCSR0C = (1<<7)| (1<<3) | (2<<1) |(1<<5);   /* 7 bits, 2 bit stop, Even */ 
